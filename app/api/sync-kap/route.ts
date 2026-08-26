@@ -103,9 +103,15 @@ async function handleSync(req: NextRequest) {
           let stock = stockList[stockIndex];
           let isNewEntry = (j + c2) % 4 === 0;
 
-          // TLY fonu için GIPTA hissesini özel olarak 'Yeni Eklenen' pozisyon yap
+          // TLY fonu için GIPTA, MOGAN ve BINHO hisselerini özel olarak 'Yeni Eklenen' pozisyon yap
           if (isTLY && j === 0) {
             stock = stockList.find((s) => s.ticker === "GIPTA") || stock;
+            isNewEntry = true;
+          } else if (isTLY && j === 1) {
+            stock = stockList.find((s) => s.ticker === "MOGAN") || stock;
+            isNewEntry = true;
+          } else if (isTLY && j === 2) {
+            stock = stockList.find((s) => s.ticker === "BINHO") || stock;
             isNewEntry = true;
           }
 

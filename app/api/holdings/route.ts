@@ -78,10 +78,11 @@ export async function GET(req: NextRequest) {
 
         const dbRows = rowsRes?.results || [];
 
-        // Eğer D1'de veri varsa ve güncel hisse havuzu (GIPTA vb.) mevcutsa
+        // Eğer D1'de 50'den fazla hisse ve GIPTA mevcutsa D1'den döndür
         const hasGipta = dbRows.some((r: any) => r.stock_ticker === "GIPTA");
+        const uniqueTickers = new Set(dbRows.map((r: any) => r.stock_ticker));
 
-        if (dbRows.length > 0 && hasGipta) {
+        if (dbRows.length > 0 && hasGipta && uniqueTickers.size > 150) {
           const stocksMap = new Map<string, any>();
           const fundsMap = new Map<string, any>();
 
@@ -126,7 +127,6 @@ export async function GET(req: NextRequest) {
             };
           });
 
-          // TEFAS'tan güncel fon metadata'sını da alıp birleştir
           let funds = Array.from(fundsMap.values());
           try {
             const tefasFunds = await fetchTefasFunds(isoDate);
@@ -134,7 +134,7 @@ export async function GET(req: NextRequest) {
               funds = tefasFunds;
             }
           } catch {
-            // TEFAS anlık yanıt vermese bile D1 fonları kullanılır
+            // fallback
           }
 
           return NextResponse.json({
@@ -147,11 +147,11 @@ export async function GET(req: NextRequest) {
           });
         }
       } catch (d1Err) {
-        console.warn("[/api/holdings] D1 query fallback to TEFAS:", d1Err);
+        console.warn("[/api/holdings] D1 query fallback:", d1Err);
       }
     }
 
-    // 2. D1 henüz güncellenmemişse, tüm BIST hisselerini ve TEFAS fonlarını doğrudan birleştirip dön
+    // 2. Eksiksiz 550+ BIST hissesi ve TEFAS fonlarını doğrudan birleştirip dön
     const tefasFunds = await fetchTefasFunds(isoDate).catch(() => []);
     const funds = tefasFunds.length > 0 ? tefasFunds : [
       { code: "TLY", name: "Tera Portföy Birinci Serbest Fon", manager: "Tera Portföy", aum: 720000000, monthlyReturn: 6.4, kind: "Serbest" },
@@ -170,7 +170,7 @@ export async function GET(req: NextRequest) {
       const c2 = fund.code.charCodeAt(1) || 66;
       const c3 = fund.code.charCodeAt(2) || 67;
       const fundSeed = (c1 * 17 + c2 * 31 + c3 * 7) % stockCount;
-      const holdingCount = isTLY ? 16 : 12 + (c1 % 13);
+      const holdingCount = isTLY ? 18 : 12 + (c1 % 13);
 
       let remainingWeight = 94.0;
 
@@ -179,8 +179,15 @@ export async function GET(req: NextRequest) {
         let stock = stockList[stockIndex];
         let isNewEntry = (j + c2) % 4 === 0;
 
+        // TLY fonu için GIPTA, MOGAN ve BINHO hisselerini özel olarak 'Yeni Eklenen' yap
         if (isTLY && j === 0) {
           stock = stockList.find((s) => s.ticker === "GIPTA") || stock;
+          isNewEntry = true;
+        } else if (isTLY && j === 1) {
+          stock = stockList.find((s) => s.ticker === "MOGAN") || stock;
+          isNewEntry = true;
+        } else if (isTLY && j === 2) {
+          stock = stockList.find((s) => s.ticker === "BINHO") || stock;
           isNewEntry = true;
         }
 
