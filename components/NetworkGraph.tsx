@@ -899,6 +899,58 @@ function DateBadge({ date, label }: { date?: string; label: string }) {
   );
 }
 
+const CustomPieTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const item = payload[0];
+    return (
+      <div
+        style={{
+          background: "#0D1119",
+          border: `1px solid ${COLORS.panelBorder2}`,
+          borderRadius: "8px",
+          padding: "8px 12px",
+          boxShadow: "0 10px 25px rgba(0,0,0,0.6)",
+        }}
+      >
+        <div style={{ color: "#FFFFFF", fontWeight: 700, fontSize: "12px" }}>
+          {item.name}
+        </div>
+        <div style={{ color: COLORS.stock, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, fontSize: "12px", marginTop: "3px" }}>
+          {Number(item.value).toFixed(2)}%{" "}
+          <span style={{ color: COLORS.textMuted, fontWeight: 400, fontSize: "10px" }}>Portföy Ağırlığı</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+const CustomBarTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const item = payload[0];
+    return (
+      <div
+        style={{
+          background: "#0D1119",
+          border: `1px solid ${COLORS.panelBorder2}`,
+          borderRadius: "8px",
+          padding: "8px 12px",
+          boxShadow: "0 10px 25px rgba(0,0,0,0.6)",
+        }}
+      >
+        <div style={{ color: "#FFFFFF", fontWeight: 700, fontSize: "12px" }}>
+          {item.payload?.name || item.name}
+        </div>
+        <div style={{ color: COLORS.fundGlow, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, fontSize: "12px", marginTop: "3px" }}>
+          {Number(item.value).toFixed(2)}%{" "}
+          <span style={{ color: COLORS.textMuted, fontWeight: 400, fontSize: "10px" }}>Fon Ağırlığı</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 function FundDrawer({
   fundCode,
   onClose,
@@ -1075,18 +1127,7 @@ function FundDrawer({
                   />
                 ))}
               </Pie>
-              <ReTooltip
-                contentStyle={{
-                  background: "#121622",
-                  border: `1px solid ${COLORS.panelBorder2}`,
-                  borderRadius: "8px",
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                  fontSize: 12,
-                }}
-                itemStyle={{ color: "#F4B740", fontWeight: 600 }}
-                labelStyle={{ color: "#FFFFFF", fontWeight: "bold", marginBottom: 2 }}
-                formatter={(v: unknown) => (typeof v === "number" ? [`${v.toFixed(2)}%`, "Portföy Ağırlığı"] : "")}
-              />
+              <ReTooltip content={<CustomPieTooltip />} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -1157,18 +1198,7 @@ function StockDrawer({
               <CartesianGrid strokeDasharray="3 3" stroke={COLORS.panelBorder} />
               <XAxis dataKey="name" tick={{ fill: COLORS.textMuted, fontSize: 11 }} />
               <YAxis tick={{ fill: COLORS.textMuted, fontSize: 11 }} />
-              <ReTooltip
-                contentStyle={{
-                  background: "#121622",
-                  border: `1px solid ${COLORS.panelBorder2}`,
-                  borderRadius: "8px",
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                  fontSize: 12,
-                }}
-                itemStyle={{ color: "#4C8DFF", fontWeight: 600 }}
-                labelStyle={{ color: "#FFFFFF", fontWeight: "bold", marginBottom: 2 }}
-                formatter={(v: unknown) => (typeof v === "number" ? [`${v.toFixed(2)}%`, "Fon Ağırlığı"] : "")}
-              />
+              <ReTooltip content={<CustomBarTooltip />} />
               <Bar dataKey="weight" fill={COLORS.stock} radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
