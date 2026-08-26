@@ -72,6 +72,28 @@ function getBasePayload(dateStr: string) {
   };
 }
 
+export function isHSYF(f: { name: string; kind?: string }): boolean {
+  const text = `${f.name} ${f.kind || ""}`.toLocaleUpperCase("tr-TR");
+  const isHisse =
+    text.includes("HİSSE SENEDİ") ||
+    text.includes("HISSE SENEDI") ||
+    text.includes("HİSSE YOĞUN") ||
+    text.includes("HSYF") ||
+    text.includes("HİSSE");
+  const isExcluded =
+    text.includes("PARA PİYASASI") ||
+    text.includes("BORÇLANMA") ||
+    text.includes("KİRA SERTİFİKASI") ||
+    text.includes("KIRA SERTIFIKASI") ||
+    text.includes("KIYMETLİ MADEN") ||
+    text.includes("ALTIN") ||
+    text.includes("GÜMÜŞ") ||
+    text.includes("LİKİT") ||
+    text.includes("TAHVİL") ||
+    text.includes("BONO");
+  return isHisse && !isExcluded;
+}
+
 export async function fetchTefasFunds(dateIso: string): Promise<TefasFund[]> {
   const dateStr = toTefasDateStr(dateIso);
   const body = getBasePayload(dateStr);
@@ -96,7 +118,7 @@ export async function fetchTefasFunds(dateIso: string): Promise<TefasFund[]> {
       monthlyReturn: Number(r["getiri1Ay"] ?? 0),
       kind: String(r["fonTurAciklama"] ?? "YAT"),
     }))
-    .filter((f) => f.code);
+    .filter((f) => f.code && isHSYF(f));
 }
 
 export async function fetchTefasDist(dateIso: string): Promise<TefasHolding[]> {

@@ -1491,28 +1491,38 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function StockSearch({
-  onPick,
+function UniversalSearch({
+  onPickStock,
+  onPickFund,
   data,
 }: {
-  onPick: (ticker: string) => void;
+  onPickStock: (ticker: string) => void;
+  onPickFund: (code: string) => void;
   data: DataState;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
 
   const results = useMemo(() => {
-    const q = query.trim().toUpperCase();
-    if (!q) return [];
-    return data.stocks
+    const q = query.trim().toLocaleUpperCase("tr-TR");
+    if (!q) return { stocks: [], funds: [] };
+    const stocks = data.stocks
       .filter(
-        (s) => s.ticker.includes(q) || s.name.toUpperCase().includes(q)
+        (s) => s.ticker.includes(q) || s.name.toLocaleUpperCase("tr-TR").includes(q)
       )
-      .slice(0, 8);
-  }, [query, data.stocks]);
+      .slice(0, 5);
+    const funds = data.funds
+      .filter(
+        (f) => f.code.includes(q) || f.name.toLocaleUpperCase("tr-TR").includes(q) || f.manager.toLocaleUpperCase("tr-TR").includes(q)
+      )
+      .slice(0, 5);
+    return { stocks, funds };
+  }, [query, data.stocks, data.funds]);
+
+  const hasResults = results.stocks.length > 0 || results.funds.length > 0;
 
   return (
-    <div className="relative" style={{ width: 260 }}>
+    <div className="relative" style={{ width: 320 }}>
       <div
         className="flex items-center gap-2 px-3 py-1.5 rounded-md"
         style={{ background: COLORS.bg, border: `1px solid ${COLORS.panelBorder2}` }}
@@ -1522,50 +1532,102 @@ function StockSearch({
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder="Hisse ara (örn. KCHOL)"
-          className="bg-transparent outline-none text-xs w-full font-mono"
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          placeholder="Hisse veya Fon ara (örn. THYAO, TLY)…"
+          className="bg-transparent outline-none text-xs w-full font-mono placeholder:text-gray-500"
           style={{ color: COLORS.text }}
         />
+        {query && (
+          <button onClick={() => setQuery("")} className="text-gray-500 hover:text-gray-300">
+            <X size={12} />
+          </button>
+        )}
       </div>
-      {open && results.length > 0 && (
+
+      {open && hasResults && (
         <div
-          className="absolute mt-1 left-0 right-0 rounded-md overflow-hidden z-10"
+          className="absolute mt-1 left-0 right-0 rounded-md overflow-hidden z-30 shadow-2xl max-h-80 overflow-y-auto"
           style={{ background: COLORS.panel, border: `1px solid ${COLORS.panelBorder2}` }}
         >
-          {results.map((s) => {
-            const rows = data.holdings.filter(
-              (h) => h.stock === s.ticker && h.qtyT > 0
-            );
-            return (
-              <button
-                key={s.ticker}
-                onMouseDown={() => { onPick(s.ticker); setQuery(""); setOpen(false); }}
-                className="w-full flex items-center justify-between px-3 py-2 text-left"
-                style={{ borderTop: `1px solid ${COLORS.panelBorder}` }}
-              >
-                <div>
-                  <div className="font-mono text-xs font-semibold" style={{ color: COLORS.stock }}>
-                    {s.ticker}
+          {results.stocks.length > 0 && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 text-gray-400 bg-[#121622]">
+                Hisseler
+              </div>
+              {results.stocks.map((s) => {
+                const count = data.holdings.filter((h) => h.stock === s.ticker && h.qtyT > 0).length;
+                return (
+                  <button
+                    key={s.ticker}
+                    onMouseDown={() => { onPickStock(s.ticker); setQuery(""); setOpen(false); }}
+                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[#161c2b] transition-colors"
+                    style={{ borderTop: `1px solid ${COLORS.panelBorder}` }}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold" style={{ color: COLORS.stock }}>
+                          {s.ticker}
+                        </span>
+                        <span className="text-[10px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          Hisse
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-gray-400 truncate max-w-[180px]">
+                        {s.name}
+                      </div>
+                    </div>
+                    <div className="text-xs font-mono text-gray-400 shrink-0">
+                      {count} fon
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {results.funds.length > 0 && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 text-gray-400 bg-[#121622]">
+                Fonlar
+              </div>
+              {results.funds.map((f) => (
+                <button
+                  key={f.code}
+                  onMouseDown={() => { onPickFund(f.code); setQuery(""); setOpen(false); }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[#161c2b] transition-colors"
+                  style={{ borderTop: `1px solid ${COLORS.panelBorder}` }}
+                >
+                  <div className="min-w-0 pr-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold" style={{ color: COLORS.fundGlow }}>
+                        {f.code}
+                      </span>
+                      <span className="text-[10px] px-1 py-0.2 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        Fon
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-gray-400 truncate max-w-[190px]">
+                      {f.name}
+                    </div>
                   </div>
-                  <div className="text-xs" style={{ color: COLORS.textDim }}>
-                    {s.name}
+                  <div className="text-right shrink-0">
+                    <div className="text-[10px] font-mono text-gray-300">
+                      {formatAUM(f.aum)}
+                    </div>
                   </div>
-                </div>
-                <div className="text-xs font-mono" style={{ color: COLORS.textMuted }}>
-                  {rows.length} fon
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
-      {open && query && results.length === 0 && (
+
+      {open && query && !hasResults && (
         <div
-          className="absolute mt-1 left-0 right-0 rounded-md p-3 text-xs z-10"
+          className="absolute mt-1 left-0 right-0 rounded-md p-3 text-xs z-30"
           style={{ background: COLORS.panel, border: `1px solid ${COLORS.panelBorder2}`, color: COLORS.textDim }}
         >
-          Eşleşme yok.
+          Eşleşen hisse veya fon bulunamadı.
         </div>
       )}
     </div>
@@ -1575,11 +1637,13 @@ function StockSearch({
 function TopBar({
   graphStats,
   onPickStock,
+  onPickFund,
   data,
   isLoading,
 }: {
   graphStats: { funds: number; stocks: number; links: number };
   onPickStock: (ticker: string) => void;
+  onPickFund: (code: string) => void;
   data: DataState;
   isLoading: boolean;
 }) {
@@ -1605,10 +1669,10 @@ function TopBar({
         </div>
       </div>
 
-      <StockSearch onPick={onPickStock} data={data} />
+      <UniversalSearch onPickStock={onPickStock} onPickFund={onPickFund} data={data} />
 
       <div
-        className="flex items-center gap-5 text-xs shrink-0"
+        className="flex items-center gap-4 text-xs shrink-0"
         style={{ color: COLORS.textMuted }}
       >
         <Legend color={COLORS.fund} label="Fon" />
@@ -1626,6 +1690,13 @@ function TopBar({
             {graphStats.funds} fon · {graphStats.stocks} hisse · {graphStats.links} bağlantı
           </div>
         )}
+        <a
+          href="/admin"
+          className="ml-2 px-2.5 py-1 rounded text-xs font-semibold hover:opacity-80 transition-opacity"
+          style={{ background: "rgba(155,123,255,0.15)", color: COLORS.violet, border: `1px solid rgba(155,123,255,0.3)` }}
+        >
+          Excel Yükle
+        </a>
       </div>
     </div>
   );
@@ -1760,6 +1831,13 @@ export default function NetworkGraph() {
     setFocusRequest({ id: "S:" + ticker, nonce: focusNonceRef.current });
   }, []);
 
+  const handlePickFund = useCallback((fundCode: string) => {
+    setMinAUM(0);
+    setSelected({ type: "fund", id: fundCode });
+    focusNonceRef.current += 1;
+    setFocusRequest({ id: "F:" + fundCode, nonce: focusNonceRef.current });
+  }, []);
+
   const selectedNodeId = selected
     ? selected.type === "fund"
       ? "F:" + selected.id
@@ -1791,6 +1869,7 @@ export default function NetworkGraph() {
       <TopBar
         graphStats={graphStats}
         onPickStock={handlePickStock}
+        onPickFund={handlePickFund}
         data={data}
         isLoading={isLoading}
       />
