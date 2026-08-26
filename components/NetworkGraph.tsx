@@ -1099,7 +1099,7 @@ function FundDrawer({
             </button>
           ))}
         </div>
-        <div className="mt-3 space-y-2 max-h-[360px] overflow-y-auto pr-1">
+        <div className="mt-3 space-y-2 max-h-[520px] overflow-y-auto pr-1">
           {activeRows.length === 0 && (
             <div className="text-xs py-6 text-center" style={{ color: COLORS.textDim }}>
               Bu kategoride hisse yok.
@@ -1159,15 +1159,15 @@ function FundDrawer({
         >
           Portföy Dağılımı (İlk 8 Pozisyon)
         </div>
-        <div style={{ height: 210 }}>
+        <div style={{ height: 175 }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={donutData}
                 dataKey="value"
                 nameKey="name"
-                innerRadius={45}
-                outerRadius={75}
+                innerRadius={40}
+                outerRadius={68}
                 paddingAngle={2}
               >
                 {donutData.map((_, i) => (
@@ -1263,7 +1263,7 @@ function StockDrawer({
         >
           Bu Hisseyi Tutan Fonlar ({rows.length})
         </div>
-        <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
           {rows.map((h) => (
             <button
               key={h.fundCode}
