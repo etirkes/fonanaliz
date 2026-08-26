@@ -391,17 +391,17 @@ function MonthPicker({
 
   return (
     <div
-      className="flex items-center gap-1 rounded-md px-1"
+      className="flex items-center justify-between gap-1 rounded-md px-2 py-1.5 w-full"
       style={{ border: `1px solid ${COLORS.panelBorder2}`, background: COLORS.bg }}
     >
-      <button onClick={prev} className="p-1 rounded hover:opacity-70">
-        <ChevronLeft size={13} color={COLORS.textMuted} />
+      <button onClick={prev} className="p-1 rounded hover:opacity-70 transition-opacity">
+        <ChevronLeft size={14} color={COLORS.textMuted} />
       </button>
-      <span className="font-mono text-xs px-1" style={{ color: COLORS.text, minWidth: 96, textAlign: "center" }}>
+      <span className="font-mono text-xs px-2 font-medium" style={{ color: COLORS.text, textAlign: "center" }}>
         {label}
       </span>
-      <button onClick={next} className="p-1 rounded hover:opacity-70">
-        <ChevronRight size={13} color={COLORS.textMuted} />
+      <button onClick={next} className="p-1 rounded hover:opacity-70 transition-opacity">
+        <ChevronRight size={14} color={COLORS.textMuted} />
       </button>
     </div>
   );
@@ -1798,7 +1798,7 @@ export default function NetworkGraph() {
       <div className="flex-1 flex min-h-0 relative">
         {/* Sol Panel */}
         <div
-          className="w-72 shrink-0"
+          className="w-80 shrink-0"
           style={{ borderRight: `1px solid ${COLORS.panelBorder}`, background: COLORS.panel }}
         >
           <LeftPanel

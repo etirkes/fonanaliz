@@ -80,7 +80,6 @@ export async function fetchTefasFunds(dateIso: string): Promise<TefasFund[]> {
     method: "POST",
     headers: HEADERS,
     body: JSON.stringify(body),
-    cache: "no-store",
   });
 
   if (!res.ok) throw new Error(`TEFAS fonGnlBlg hatası: HTTP ${res.status}`);
@@ -108,7 +107,6 @@ export async function fetchTefasDist(dateIso: string): Promise<TefasHolding[]> {
     method: "POST",
     headers: HEADERS,
     body: JSON.stringify(body),
-    cache: "no-store",
   });
 
   if (!res.ok) throw new Error(`TEFAS dagilim hatası: HTTP ${res.status}`);

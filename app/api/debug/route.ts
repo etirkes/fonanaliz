@@ -22,7 +22,6 @@ async function tryFetch(label: string, url: string, body: unknown) {
       method: "POST",
       headers: HEADERS,
       body: JSON.stringify(body),
-      cache: "no-store",
     });
     const text = await r.text();
     let parsed: unknown;
