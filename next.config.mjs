@@ -1,6 +1,5 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   // TEFAS'a giden API isteklerine CORS başlığı ekle
   async headers() {
     return [
@@ -13,7 +12,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // TEFAS domain'ine giden istekler için yönlendirme
   async rewrites() {
     return [];
   },
