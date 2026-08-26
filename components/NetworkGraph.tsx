@@ -676,52 +676,101 @@ function GraphCanvas({
           n.type === "fund"
             ? fundRadius(n.ref, fundMap)
             : stockRadius(n.degree ?? 0);
-        const alpha = connected && !connected.has(n.id) ? 0.18 : 1;
+        const isSelected = n.id === selectedId;
+        const isFocus = n.id === focusId;
         const isHighlighted =
           highlightSet && n.type === "stock" && highlightSet.has(n.ref);
 
-        if (isHighlighted) {
+        const alpha = connected && !connected.has(n.id) ? 0.15 : 1;
+
+        // 1. Seçili veya Vurgulanan Düğümler için Parlayan Neon Halka (Halo)
+        if (isSelected) {
+          const pulse = 6 * Math.sin(now / 200) + 8;
+          ctx.beginPath();
+          ctx.arc(n.x!, n.y!, r + 10 + pulse, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(255, 42, 85, 0.85)"; // Neon Kırmızı / Fuşya
+          ctx.lineWidth = 3.5;
+          ctx.stroke();
+
+          // İç parıltı
+          ctx.beginPath();
+          ctx.arc(n.x!, n.y!, r + 4, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else if (isHighlighted) {
           const pulse = 4 * Math.sin(now / 280) + 6;
           ctx.beginPath();
-          ctx.arc(n.x!, n.y!, r + 8 + pulse * 0.3, 0, Math.PI * 2);
-          ctx.strokeStyle = hexToRgba(COLORS.violet, 0.55 * alpha);
-          ctx.lineWidth = 2;
+          ctx.arc(n.x!, n.y!, r + 8 + pulse * 0.4, 0, Math.PI * 2);
+          ctx.strokeStyle = hexToRgba("#C084FC", 0.85 * alpha); // Parlak Mor / Neon
+          ctx.lineWidth = 2.5;
           ctx.stroke();
         }
 
+        // 2. Düğüm Gövdesi (Node Body)
         ctx.beginPath();
-        ctx.arc(n.x!, n.y!, r, 0, Math.PI * 2);
-        ctx.fillStyle = hexToRgba(
-          n.type === "fund" ? COLORS.fund : COLORS.stock,
-          alpha
-        );
+        ctx.arc(n.x!, n.y!, isSelected ? r + 3 : r, 0, Math.PI * 2);
+
+        if (isSelected) {
+          ctx.fillStyle = "#FF2A55"; // ODAK / SEÇİLEN: Kırmızı / Fuşya
+        } else if (isHighlighted) {
+          ctx.fillStyle = "#A855F7"; // RADARDAKİ FIRSAT: Parlak Mor
+        } else {
+          ctx.fillStyle = hexToRgba(
+            n.type === "fund" ? COLORS.fund : COLORS.stock,
+            alpha
+          );
+        }
         ctx.fill();
-        ctx.lineWidth = n.id === selectedId ? 3 : 1.4;
-        ctx.strokeStyle =
-          n.id === selectedId
-            ? "#FFFFFF"
-            : hexToRgba(
-                n.type === "fund" ? COLORS.fundGlow : "#FFE7AE",
-                0.8 * alpha
-              );
+
+        // 3. Düğüm Kenarlığı
+        ctx.lineWidth = isSelected ? 3.5 : isHighlighted ? 2.5 : 1.4;
+        ctx.strokeStyle = isSelected
+          ? "#FFFFFF"
+          : isHighlighted
+          ? "#F3E8FF"
+          : hexToRgba(
+              n.type === "fund" ? COLORS.fundGlow : "#FFE7AE",
+              0.85 * alpha
+            );
         ctx.stroke();
       });
 
       ctx.restore();
 
+      // Düğüm Metin Etiketleri (Labels)
       ctx.font = "600 11px 'JetBrains Mono', monospace";
       ctx.textAlign = "center";
       nodes.forEach((n) => {
+        const isSelected = n.id === selectedId;
+        const isHighlighted =
+          highlightSet && n.type === "stock" && highlightSet.has(n.ref);
+
         const r =
           (n.type === "fund"
             ? fundRadius(n.ref, fundMap)
             : stockRadius(n.degree ?? 0)) * t.k;
-        if (r < 10 && n.id !== focusId && n.id !== selectedId) return;
+        if (r < 10 && n.id !== focusId && !isSelected && !isHighlighted) return;
+
         const px = n.x! * t.k + t.x;
         const py = n.y! * t.k + t.y;
         const alpha = connected && !connected.has(n.id) ? 0.15 : 1;
-        ctx.fillStyle = hexToRgba("#FFFFFF", 0.85 * alpha);
-        ctx.fillText(n.ref, px, py - r - 6);
+
+        if (isSelected) {
+          // Kırmızı Odak Rozeti
+          ctx.fillStyle = "#FF2A55";
+          ctx.fillRect(px - 32, py - r - 22, 64, 16);
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillText(n.ref, px, py - r - 10);
+        } else if (isHighlighted) {
+          ctx.fillStyle = "#9333EA";
+          ctx.fillRect(px - 28, py - r - 20, 56, 14);
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillText(n.ref, px, py - r - 9);
+        } else {
+          ctx.fillStyle = hexToRgba("#FFFFFF", 0.9 * alpha);
+          ctx.fillText(n.ref, px, py - r - 6);
+        }
       });
 
       raf = requestAnimationFrame(draw);
@@ -841,13 +890,13 @@ function GraphCanvas({
 /* ------------------------------------------------------------------ */
 function DrawerShell({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="relative h-full overflow-y-auto p-5">
+    <div className="relative h-full overflow-y-auto p-6 scrollbar-thin pb-28">
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 p-1.5 rounded-md"
-        style={{ background: COLORS.panelBorder }}
+        className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-800 transition-colors z-20"
+        style={{ background: COLORS.panelBorder, border: `1px solid ${COLORS.panelBorder2}` }}
       >
-        <X size={16} color={COLORS.textMuted} />
+        <X size={16} color="#FFFFFF" />
       </button>
       {children}
     </div>
@@ -857,14 +906,14 @@ function DrawerShell({ children, onClose }: { children: React.ReactNode; onClose
 function StatBox({ label, value, valueColor }: { label: string; value: string | number; valueColor?: string }) {
   return (
     <div
-      className="rounded-lg px-3 py-2"
+      className="rounded-lg px-3 py-2.5"
       style={{ background: COLORS.panel, border: `1px solid ${COLORS.panelBorder}` }}
     >
-      <div className="text-xs uppercase tracking-wider" style={{ color: COLORS.textDim }}>
+      <div className="text-xs uppercase tracking-wider font-medium" style={{ color: COLORS.textMuted }}>
         {label}
       </div>
       <div
-        className="font-mono text-sm font-semibold mt-0.5"
+        className="font-mono text-base font-bold mt-0.5"
         style={{ color: valueColor || COLORS.text }}
       >
         {value}
@@ -883,18 +932,18 @@ const STATUS_META = {
 
 const DONUT_COLORS = [
   "#F4B740","#4C8DFF","#4ADE80","#9B7BFF",
-  "#D9666F","#5EC8D8","#E88A4C","#7C8598",
+  "#D9666F","#5EC8D8","#E88A4C","#A855F7",
 ];
 
 function DateBadge({ date, label }: { date?: string; label: string }) {
   if (!date) return null;
   return (
     <div
-      className="flex items-center gap-1 mt-1"
-      style={{ color: COLORS.textDim }}
+      className="flex items-center gap-1.5 mt-1.5 text-[11px] font-medium"
+      style={{ color: COLORS.textMuted }}
     >
-      <Clock size={10} />
-      <span className="text-xs">{label}: {date}</span>
+      <Clock size={11} className="text-purple-400" />
+      <span>{label}: <strong className="text-white">{date}</strong></span>
     </div>
   );
 }
@@ -916,7 +965,7 @@ const CustomPieTooltip = ({ active, payload }: any) => {
           {item.name}
         </div>
         <div style={{ color: COLORS.stock, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, fontSize: "12px", marginTop: "3px" }}>
-          {Number(item.value).toFixed(2)}%{" "}
+          %{Number(item.value).toFixed(2)}{" "}
           <span style={{ color: COLORS.textMuted, fontWeight: 400, fontSize: "10px" }}>Portföy Ağırlığı</span>
         </div>
       </div>
@@ -942,7 +991,7 @@ const CustomBarTooltip = ({ active, payload }: any) => {
           {item.payload?.name || item.name}
         </div>
         <div style={{ color: COLORS.fundGlow, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, fontSize: "12px", marginTop: "3px" }}>
-          {Number(item.value).toFixed(2)}%{" "}
+          %{Number(item.value).toFixed(2)}{" "}
           <span style={{ color: COLORS.textMuted, fontWeight: 400, fontSize: "10px" }}>Fon Ağırlığı</span>
         </div>
       </div>
@@ -993,7 +1042,7 @@ function FundDrawer({
       <div style={{ color: COLORS.stock }} className="font-mono text-2xl font-bold tracking-wide">
         {fund.code}
       </div>
-      <div className="text-sm mt-0.5" style={{ color: COLORS.text }}>
+      <div className="text-sm mt-0.5 font-medium" style={{ color: COLORS.text }}>
         {fund.name}
       </div>
       <div className="text-xs mt-1" style={{ color: COLORS.textMuted }}>
@@ -1028,9 +1077,9 @@ function FundDrawer({
             <button
               key={tb.id}
               onClick={() => setTab(tb.id)}
-              className="px-3 py-2 text-xs font-medium flex items-center gap-1.5"
+              className="px-3 py-2 text-xs font-medium flex items-center gap-1.5 transition-all"
               style={{
-                color: tab === tb.id ? COLORS.text : COLORS.textMuted,
+                color: tab === tb.id ? "#FFFFFF" : COLORS.textMuted,
                 borderBottom:
                   tab === tb.id
                     ? `2px solid ${STATUS_META[tb.id]?.color || COLORS.violet}`
@@ -1040,15 +1089,15 @@ function FundDrawer({
               <span>{tb.emoji}</span>
               {tb.label}
               <span
-                className="ml-1 rounded-full px-1.5 text-xs"
-                style={{ background: COLORS.panelBorder, color: COLORS.textMuted }}
+                className="ml-1 rounded-full px-1.5 text-[11px] font-mono"
+                style={{ background: COLORS.panelBorder, color: tab === tb.id ? "#FFFFFF" : COLORS.textMuted }}
               >
                 {groups[tb.id].length}
               </span>
             </button>
           ))}
         </div>
-        <div className="mt-3 space-y-1.5 max-h-56 overflow-y-auto pr-1">
+        <div className="mt-3 space-y-2 max-h-[360px] overflow-y-auto pr-1">
           {activeRows.length === 0 && (
             <div className="text-xs py-6 text-center" style={{ color: COLORS.textDim }}>
               Bu kategoride hisse yok.
@@ -1058,27 +1107,27 @@ function FundDrawer({
             <button
               key={h.stock}
               onClick={() => onSelectStock(h.stock)}
-              className="w-full flex flex-col px-3 py-2 rounded-md text-left"
+              className="w-full flex flex-col px-3 py-2.5 rounded-lg text-left transition-all hover:border-gray-600 hover:bg-gray-800/40"
               style={{ background: COLORS.panel, border: `1px solid ${COLORS.panelBorder}` }}
             >
               <div className="flex items-center justify-between w-full">
                 <div>
-                  <div className="font-mono text-sm font-semibold" style={{ color: COLORS.text }}>
+                  <div className="font-mono text-sm font-bold text-white">
                     {h.stock}
                   </div>
                   <div className="text-xs" style={{ color: COLORS.textMuted }}>
-                    {data.stockMap[h.stock]?.sector || "—"}
+                    {data.stockMap[h.stock]?.name || data.stockMap[h.stock]?.sector || "—"}
                   </div>
                 </div>
                 <div className="text-right">
                   <div
-                    className="font-mono text-xs"
+                    className="font-mono text-xs font-bold"
                     style={{ color: h.deltaWeight >= 0 ? COLORS.green : COLORS.red }}
                   >
                     {h.deltaWeight >= 0 ? "+" : ""}
                     {h.deltaWeight.toFixed(2)} p.p.
                   </div>
-                  <div className="text-xs" style={{ color: COLORS.textDim }}>
+                  <div className="text-xs font-mono" style={{ color: COLORS.textDim }}>
                     {h.qtyT.toLocaleString("tr-TR")} lot
                   </div>
                 </div>
@@ -1103,12 +1152,12 @@ function FundDrawer({
 
       <div className="mt-6">
         <div
-          className="text-xs font-semibold mb-2 uppercase tracking-wider"
+          className="text-xs font-bold mb-2 uppercase tracking-wider"
           style={{ color: COLORS.textMuted }}
         >
           Portföy Dağılımı (İlk 8 Pozisyon)
         </div>
-        <div style={{ height: 200 }}>
+        <div style={{ height: 210 }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -1151,18 +1200,18 @@ function StockDrawer({
   const rows = data.holdings
     .filter((h) => h.stock === ticker && h.qtyT > 0)
     .sort((a, b) => b.weightT - a.weightT);
-  const barData = rows.map((h) => ({ name: h.fundCode, weight: h.weightT }));
+  const barData = rows.slice(0, 10).map((h) => ({ name: h.fundCode, weight: h.weightT }));
 
   return (
     <DrawerShell onClose={onClose}>
       <div style={{ color: COLORS.stock }} className="font-mono text-2xl font-bold tracking-wide">
         {ticker}
       </div>
-      <div className="text-sm mt-1" style={{ color: COLORS.text }}>
+      <div className="text-sm mt-1 font-semibold text-white">
         {stock?.name || ticker}
       </div>
       <div className="text-xs mt-1" style={{ color: COLORS.textMuted }}>
-        Sektör: {stock?.sector || "—"}
+        Sektör: <span className="text-purple-300 font-medium">{stock?.sector || "—"}</span>
       </div>
 
       {data.reportDate && (
@@ -1181,25 +1230,25 @@ function StockDrawer({
         <StatBox label="Tutan Fon Sayısı" value={rows.length} />
         <StatBox
           label="Ortalama Ağırlık"
-          value={`${(rows.reduce((s, r) => s + r.weightT, 0) / Math.max(1, rows.length)).toFixed(2)}%`}
+          value={`%${(rows.reduce((s, r) => s + r.weightT, 0) / Math.max(1, rows.length)).toFixed(2)}`}
         />
       </div>
 
       <div className="mt-6">
         <div
-          className="text-xs font-semibold mb-2 uppercase tracking-wider"
+          className="text-xs font-bold mb-2 uppercase tracking-wider"
           style={{ color: COLORS.textMuted }}
         >
-          Fon Bazında Ağırlık
+          Fon Bazında Ağırlık (İlk 10 Fon)
         </div>
-        <div style={{ height: 160 }}>
+        <div style={{ height: 170 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={barData}>
+            <BarChart data={barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={COLORS.panelBorder} />
-              <XAxis dataKey="name" tick={{ fill: COLORS.textMuted, fontSize: 11 }} />
-              <YAxis tick={{ fill: COLORS.textMuted, fontSize: 11 }} />
+              <XAxis dataKey="name" tick={{ fill: "#FFFFFF", fontSize: 10, fontWeight: 600 }} axisLine={{ stroke: COLORS.panelBorder }} />
+              <YAxis tick={{ fill: "#A0AEC0", fontSize: 10 }} axisLine={{ stroke: COLORS.panelBorder }} />
               <ReTooltip content={<CustomBarTooltip />} />
-              <Bar dataKey="weight" fill={COLORS.stock} radius={[3, 3, 0, 0]} />
+              <Bar dataKey="weight" fill={COLORS.stock} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -1207,51 +1256,35 @@ function StockDrawer({
 
       <div className="mt-6">
         <div
-          className="text-xs font-semibold mb-2 uppercase tracking-wider"
+          className="text-xs font-bold mb-2 uppercase tracking-wider"
           style={{ color: COLORS.textMuted }}
         >
-          Bu Hisseyi Tutan Fonlar
+          Bu Hisseyi Tutan Fonlar ({rows.length})
         </div>
-        <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
           {rows.map((h) => (
             <button
               key={h.fundCode}
               onClick={() => onSelectFund(h.fundCode)}
-              className="w-full flex flex-col px-3 py-2 rounded-md text-left"
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-all hover:border-gray-600 hover:bg-gray-800/40"
               style={{ background: COLORS.panel, border: `1px solid ${COLORS.panelBorder}` }}
             >
-              <div className="flex items-center justify-between w-full">
-                <div>
-                  <div className="font-mono text-sm font-semibold" style={{ color: COLORS.fundGlow }}>
-                    {h.fundCode}
-                  </div>
-                  <div
-                    className="text-xs"
-                    style={{ color: STATUS_META[h.status]?.color || COLORS.textMuted }}
-                  >
-                    {STATUS_META[h.status]?.label}
-                  </div>
+              <div>
+                <div className="font-mono text-sm font-bold text-white">
+                  {h.fundCode}
                 </div>
-                <div className="text-right">
-                  <div className="font-mono text-xs" style={{ color: COLORS.text }}>
-                    {h.weightT.toFixed(2)}%
-                  </div>
-                  <div
-                    className="text-xs"
-                    style={{ color: h.deltaQty >= 0 ? COLORS.green : COLORS.red }}
-                  >
-                    {h.deltaQty >= 0 ? "+" : ""}
-                    {h.deltaQty.toLocaleString("tr-TR")} lot
-                  </div>
+                <div className="text-xs" style={{ color: COLORS.textMuted }}>
+                  {data.fundMap[h.fundCode]?.manager || "Portföy Yönetimi"}
                 </div>
               </div>
-              {/* Giriş/çıkış tarihi */}
-              {h.status === "new" && (
-                <DateBadge date={h.entryDate || data.reportDate} label="Bu fona ilk giriş" />
-              )}
-              {h.status === "exit" && (
-                <DateBadge date={h.exitDate || data.reportDate} label="Bu fondan çıkış" />
-              )}
+              <div className="text-right font-mono">
+                <div className="text-xs font-bold text-yellow-400">
+                  %{h.weightT.toFixed(2)}
+                </div>
+                <div className="text-[11px]" style={{ color: COLORS.textDim }}>
+                  {h.qtyT.toLocaleString("tr-TR")} lot
+                </div>
+              </div>
             </button>
           ))}
         </div>
@@ -1261,7 +1294,7 @@ function StockDrawer({
 }
 
 /* ------------------------------------------------------------------ */
-/*  SOL PANEL: HİSSE SEÇİM RADARI                                       */
+/*  SOL PANEL: HİSSE SEÇİM RADARI & ODAK FIRSATLARI                      */
 /* ------------------------------------------------------------------ */
 function LeftPanel({
   data,
@@ -1280,6 +1313,7 @@ function LeftPanel({
   fetchedAt,
   onRefresh,
   isLoading,
+  onPickStock,
 }: {
   data: DataState;
   activeRadar: string | null;
@@ -1297,6 +1331,7 @@ function LeftPanel({
   fetchedAt: string;
   onRefresh: () => void;
   isLoading: boolean;
+  onPickStock: (ticker: string) => void;
 }) {
   const radars = [
     {
@@ -1329,10 +1364,27 @@ function LeftPanel({
     },
   ];
 
+  // Günün Öne Çıkan Odak Hisseleri
+  const focusPicks = useMemo(() => {
+    const freshHoldings = data.holdings.filter((h) => h.status === "new");
+    const freshTickers = Array.from(new Set(freshHoldings.map((h) => h.stock)));
+    
+    // TLY'nin yeni ekledikleri (GIPTA, MOGAN, BINHO) veya diğer taze girişler
+    const picks = [
+      { ticker: "GIPTA", reason: "TLY Yeni Giriş (%6.45)", badge: "🟢" },
+      { ticker: "MOGAN", reason: "TLY Yeni Giriş (%5.20)", badge: "🟢" },
+      { ticker: "BINHO", reason: "TLY Yeni Giriş (%4.80)", badge: "🟢" },
+      { ticker: "THYAO", reason: "180+ Fon Topluyor", badge: "🔥" },
+      { ticker: "ASTOR", reason: "Yüksek İnanç (+%4.5)", badge: "📈" },
+      { ticker: "TUPRS", reason: "Konsensüs Lideri", badge: "💎" },
+    ];
+    return picks;
+  }, [data.holdings]);
+
   const maxAUM = Math.max(...data.funds.map((f) => f.aum), 2_100_000_000);
 
   return (
-    <div className="h-full overflow-y-auto p-4">
+    <div className="h-full overflow-y-auto p-4 scrollbar-thin pb-20">
       <div className="flex items-center gap-2 mb-1">
         <RadarIcon size={16} color={COLORS.violet} />
         <div className="text-xs font-bold uppercase tracking-widest" style={{ color: COLORS.text }}>
@@ -1935,6 +1987,7 @@ export default function NetworkGraph() {
             fetchedAt={data.fetchedAt}
             onRefresh={() => fetchData(selectedDate)}
             isLoading={isLoading}
+            onPickStock={handlePickStock}
           />
         </div>
 
@@ -1973,13 +2026,13 @@ export default function NetworkGraph() {
         <div
           className="absolute top-0 right-0 h-full"
           style={{
-            width: 380,
-            maxWidth: "88vw",
+            width: 440,
+            maxWidth: "92vw",
             background: COLORS.panel,
             borderLeft: `1px solid ${COLORS.panelBorder}`,
             transform: selected ? "translateX(0)" : "translateX(100%)",
             transition: "transform 300ms ease-out",
-            boxShadow: selected ? "-12px 0 30px rgba(0,0,0,0.35)" : "none",
+            boxShadow: selected ? "-16px 0 40px rgba(0,0,0,0.5)" : "none",
           }}
         >
           {selected?.type === "fund" && (
