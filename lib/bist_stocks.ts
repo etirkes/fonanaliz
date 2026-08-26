@@ -315,7 +315,7 @@ export const ALL_BIST_STOCKS: BISTStock[] = [
   { ticker: "KORDS", name: "Kordsa Teknik Tekstil", sector: "Kimya & Kompozit" },
   { ticker: "KOTON", name: "Koton Mağazacılık", sector: "Perakende" },
   { ticker: "KOZAA", name: "Koza Anadolu Metal", sector: "Madencilik" },
-  { ticker: "KOZAL", name: "Koza Altın İşletmeleri", sector: "Madencilik" },
+  { ticker: "TRALT", name: "Türk Altın İşletmeleri (Eski: KOZAL)", sector: "Madencilik" },
   { ticker: "KRDMD", name: "Kardemir (D)", sector: "Demir Çelik" },
   { ticker: "KRDMA", name: "Kardemir (A)", sector: "Demir Çelik" },
   { ticker: "KRDMB", name: "Kardemir (B)", sector: "Demir Çelik" },
