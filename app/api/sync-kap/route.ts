@@ -4,7 +4,7 @@ import { fetchRecentKAPDisclosures } from "@/lib/kap";
 
 export const runtime = "edge";
 
-// BIST 100 / BIST 30 Popüler Hisseler ve Sektörleri
+// BIST 100 / BIST 500 Popüler Hisseler ve Sektörleri
 const STOCK_SECTORS: Record<string, { name: string; sector: string }> = {
   THYAO: { name: "Türk Hava Yolları", sector: "Ulaştırma" },
   TUPRS: { name: "Tüpraş", sector: "Enerji / Petrol" },
@@ -36,6 +36,28 @@ const STOCK_SECTORS: Record<string, { name: string; sector: string }> = {
   EKGYO: { name: "Emlak Konut GYO", sector: "Gayrimenkul" },
   ALARK: { name: "Alarko Holding", sector: "Holding" },
   BRISA: { name: "Brisa Lastik", sector: "Otomotiv Yan Sanayi" },
+  GIPTA: { name: "Gıpta Ofis Kırtasiye", sector: "Kırtasiye / İmalat" },
+  EBEBK: { name: "Ebebek Mağazacılık", sector: "Perakende" },
+  TABGD: { name: "Tab Gıda", sector: "Gıda & İçecek" },
+  BINHO: { name: "1000 Yatırımlar Holding", sector: "Holding / Ulaşım" },
+  AGROT: { name: "Agrotech Teknoloji", sector: "Yazılım / Teknoloji" },
+  KOTON: { name: "Koton Mağazacılık", sector: "Tekstil / Perakende" },
+  LILAK: { name: "Lila Kağıt", sector: "Kağıt / Ambalaj" },
+  OBAMS: { name: "Oba Makarnacılık", sector: "Gıda" },
+  ALFAS: { name: "Alfa Solar Enerji", sector: "Güneş Enerjisi" },
+  CVKMD: { name: "CVK Madencilik", sector: "Madencilik" },
+  EUPWR: { name: "Europower Enerji", sector: "Enerji" },
+  CWENE: { name: "CW Enerji", sector: "Enerji" },
+  SOKE:  { name: "Söke Değirmencilik", sector: "Gıda" },
+  SDTTR: { name: "SDT Savunma", sector: "Savunma" },
+  BORSK: { name: "Bor Şeker", sector: "Gıda" },
+  ENTRA: { name: "IC Enterra Yenilenebilir Enerji", sector: "Enerji" },
+  ODINE: { name: "Odine Solutions Teknoloji", sector: "Teknoloji" },
+  SURGY: { name: "Sur Tatil Evleri GYO", sector: "Gayrimenkul" },
+  FORTE: { name: "Forte Bilgi İletişim", sector: "Bilişim" },
+  PASEU: { name: "Pasifik Eurasia Lojistik", sector: "Lojistik" },
+  FONET: { name: "Fonet Bilgi Teknolojileri", sector: "Sağlık Bilişimi" },
+  VBTYZ: { name: "VBT Yazılım", sector: "Yazılım" },
 };
 
 function getD1(req: NextRequest): any {
@@ -116,14 +138,23 @@ async function handleSync(req: NextRequest) {
 
       for (let i = 0; i < funds.length; i++) {
         const fund = funds[i];
+        const isTLY = fund.code.toUpperCase() === "TLY";
+
         const fundSeed = (fund.code.charCodeAt(0) * 7 + fund.code.charCodeAt(1) * 13) % tickers.length;
-        const holdingCount = 8 + (fund.code.charCodeAt(0) % 7);
+        const holdingCount = isTLY ? 12 : 8 + (fund.code.charCodeAt(0) % 7);
 
         let remainingWeight = 92.0;
 
         for (let j = 0; j < holdingCount; j++) {
-          const tickerIndex = (fundSeed + j * 3) % tickers.length;
-          const ticker = tickers[tickerIndex];
+          let ticker = tickers[(fundSeed + j * 3) % tickers.length];
+          let isNewEntry = (j + fundSeed) % 5 === 0;
+
+          // TLY fonu için GIPTA hissesini kesin olarak 'YENİ EKLENEN' pozisyon olarak dahil et
+          if (isTLY && j === 0) {
+            ticker = "GIPTA";
+            isNewEntry = true;
+          }
+
           const isLast = j === holdingCount - 1;
           const weight = isLast
             ? Number(remainingWeight.toFixed(2))
@@ -131,8 +162,6 @@ async function handleSync(req: NextRequest) {
           
           remainingWeight -= weight;
           const qty = Math.round((fund.aum * (weight / 100)) / 150) || 50000;
-
-          const isNewEntry = (j + fundSeed) % 5 === 0;
           const entryDate = isNewEntry ? reportDate : prevDate;
 
           allStatements.push(
