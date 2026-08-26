@@ -14,7 +14,7 @@ const HEADERS = {
     "(KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
 };
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 async function tryFetch(label: string, url: string, body: unknown) {
   try {

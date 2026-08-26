@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchTefasDist, fetchTefasFunds, ymToIso } from "@/lib/tefas";
 import { normalizeHoldings } from "@/lib/normalize";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 /** "YYYY-MM" → bir önceki ay "YYYY-MM" */
 function prevMonth(ym: string): string {
