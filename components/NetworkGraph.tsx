@@ -22,6 +22,8 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  Target,
+  Flame,
 } from "lucide-react";
 import {
   PieChart,
@@ -1391,8 +1393,33 @@ function LeftPanel({
           Hisse Seçim Radarı
         </div>
       </div>
-      <div className="text-xs mb-4" style={{ color: COLORS.textMuted }}>
-        Alfa üretmek için algoritmik filtreler.
+      {/* 🎯 ODAK / FIRSAT HİSSELERİ: GÜNÜN SICAK HİSSELERİ */}
+      <div className="mb-4 p-3 rounded-xl border border-rose-500/40 bg-gradient-to-br from-rose-950/30 via-gray-900/70 to-gray-900/90 shadow-lg shadow-rose-950/20">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-rose-400">
+            <Flame size={15} className="text-rose-400 animate-pulse" />
+            <span>🎯 ODAK / FIRSAT HİSSELERİ</span>
+          </div>
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+            ÖNE ÇIKAN
+          </span>
+        </div>
+        <div className="text-[11px] text-gray-400 mb-2.5 leading-relaxed">
+          Fonların sıfırdan girdiği veya en çok topladığı hisseler:
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {focusPicks.map((stock) => (
+            <button
+              key={stock.ticker}
+              onClick={() => onPickStock(stock.ticker)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all hover:scale-105 border border-rose-500/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/25 hover:border-rose-400 shadow-sm cursor-pointer"
+            >
+              <span>{stock.badge}</span>
+              <span className="text-white">{stock.ticker}</span>
+              <span className="text-[10px] text-rose-300 font-normal">({stock.reason})</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Dönem Seçici */}
