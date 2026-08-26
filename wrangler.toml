@@ -1,0 +1,8 @@
+name = "fonanaliz"
+compatibility_date = "2024-03-29"
+pages_build_output_dir = ".vercel/output/static"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fonanaliz-db"
+database_id = "dfbe3f38-02aa-475b-9fcc-89761f451ff8"
