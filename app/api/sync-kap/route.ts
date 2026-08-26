@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchTefasFunds, ymToIso } from "@/lib/tefas";
-import { extractHoldingsFromHtml, fetchRecentKAPDisclosures } from "@/lib/kap";
+import { fetchRecentKAPDisclosures } from "@/lib/kap";
 
 export const runtime = "edge";
 
@@ -48,6 +48,13 @@ function getD1(req: NextRequest): any {
   return null;
 }
 
+async function executeInBatches(db: any, statements: any[], batchSize = 60) {
+  for (let i = 0; i < statements.length; i += batchSize) {
+    const chunk = statements.slice(i, i + batchSize);
+    await db.batch(chunk);
+  }
+}
+
 export async function GET(req: NextRequest) {
   return handleSync(req);
 }
@@ -74,41 +81,43 @@ async function handleSync(req: NextRequest) {
     let insertedHoldings = 0;
 
     if (db) {
-      // D1 Veritabanına fonları ekle
+      const allStatements: any[] = [];
+
+      // 1. Fonları ekle (Batch)
       for (const fund of funds) {
-        await db
-          .prepare(
-            `INSERT INTO funds (code, name, manager, fund_type) 
-             VALUES (?, ?, ?, ?) 
-             ON CONFLICT(code) DO UPDATE SET name=excluded.name, manager=excluded.manager`
-          )
-          .bind(fund.code, fund.name, fund.manager, fund.kind)
-          .run();
+        allStatements.push(
+          db
+            .prepare(
+              `INSERT INTO funds (code, name, manager, fund_type) 
+               VALUES (?, ?, ?, ?) 
+               ON CONFLICT(code) DO UPDATE SET name=excluded.name, manager=excluded.manager`
+            )
+            .bind(fund.code, fund.name, fund.manager, fund.kind)
+        );
         insertedFunds++;
       }
 
-      // Hisseleri ekle
+      // 2. Hisseleri ekle (Batch)
       for (const [ticker, meta] of Object.entries(STOCK_SECTORS)) {
-        await db
-          .prepare(
-            `INSERT INTO stocks (ticker, name, sector) 
-             VALUES (?, ?, ?) 
-             ON CONFLICT(ticker) DO UPDATE SET name=excluded.name, sector=excluded.sector`
-          )
-          .bind(ticker, meta.name, meta.sector)
-          .run();
+        allStatements.push(
+          db
+            .prepare(
+              `INSERT INTO stocks (ticker, name, sector) 
+               VALUES (?, ?, ?) 
+               ON CONFLICT(ticker) DO UPDATE SET name=excluded.name, sector=excluded.sector`
+            )
+            .bind(ticker, meta.name, meta.sector)
+        );
         insertedStocks++;
       }
 
-      // PDR hisse dağılımlarını oluştur ve D1'e kaydet
-      // Fonların portföy sepetini gerçekçi BIST hisseleriyle bağla
+      // 3. PDR hisse dağılımlarını ekle (Batch)
       const tickers = Object.keys(STOCK_SECTORS);
 
       for (let i = 0; i < funds.length; i++) {
         const fund = funds[i];
-        // Her fon için deterministik portföy hisseleri seç
         const fundSeed = (fund.code.charCodeAt(0) * 7 + fund.code.charCodeAt(1) * 13) % tickers.length;
-        const holdingCount = 8 + (fund.code.charCodeAt(0) % 7); // 8-15 arası hisse
+        const holdingCount = 8 + (fund.code.charCodeAt(0) % 7);
 
         let remainingWeight = 92.0;
 
@@ -123,23 +132,26 @@ async function handleSync(req: NextRequest) {
           remainingWeight -= weight;
           const qty = Math.round((fund.aum * (weight / 100)) / 150) || 50000;
 
-          // Giriş tarihi (t-1 veya t)
           const isNewEntry = (j + fundSeed) % 5 === 0;
           const entryDate = isNewEntry ? reportDate : prevDate;
 
-          await db
-            .prepare(
-              `INSERT INTO fund_holdings (fund_code, stock_ticker, report_date, qty, weight, entry_date)
-               VALUES (?, ?, ?, ?, ?, ?)
-               ON CONFLICT(fund_code, stock_ticker, report_date) 
-               DO UPDATE SET qty=excluded.qty, weight=excluded.weight, entry_date=excluded.entry_date`
-            )
-            .bind(fund.code, ticker, reportDate, qty, weight, entryDate)
-            .run();
+          allStatements.push(
+            db
+              .prepare(
+                `INSERT INTO fund_holdings (fund_code, stock_ticker, report_date, qty, weight, entry_date)
+                 VALUES (?, ?, ?, ?, ?, ?)
+                 ON CONFLICT(fund_code, stock_ticker, report_date) 
+                 DO UPDATE SET qty=excluded.qty, weight=excluded.weight, entry_date=excluded.entry_date`
+              )
+              .bind(fund.code, ticker, reportDate, qty, weight, entryDate)
+          );
 
           insertedHoldings++;
         }
       }
+
+      // Tüm SQL sorgularını toplu (batch) paketler halinde gönder
+      await executeInBatches(db, allStatements, 60);
     }
 
     return NextResponse.json({
