@@ -74,12 +74,14 @@ function getBasePayload(dateStr: string) {
 
 export function isHSYF(f: { name: string; kind?: string }): boolean {
   const text = `${f.name} ${f.kind || ""}`.toLocaleUpperCase("tr-TR");
-  const isHisse =
+  const isIncluded =
     text.includes("HİSSE SENEDİ") ||
     text.includes("HISSE SENEDI") ||
     text.includes("HİSSE YOĞUN") ||
     text.includes("HSYF") ||
-    text.includes("HİSSE");
+    text.includes("HİSSE") ||
+    text.includes("SERBEST"); // TLY ve diğer Serbest Fonlar dahil
+
   const isExcluded =
     text.includes("PARA PİYASASI") ||
     text.includes("BORÇLANMA") ||
@@ -91,7 +93,7 @@ export function isHSYF(f: { name: string; kind?: string }): boolean {
     text.includes("LİKİT") ||
     text.includes("TAHVİL") ||
     text.includes("BONO");
-  return isHisse && !isExcluded;
+  return isIncluded && !isExcluded;
 }
 
 export async function fetchTefasFunds(dateIso: string): Promise<TefasFund[]> {
