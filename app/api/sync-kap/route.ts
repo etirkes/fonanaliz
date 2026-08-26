@@ -1,64 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchTefasFunds, ymToIso } from "@/lib/tefas";
 import { fetchRecentKAPDisclosures } from "@/lib/kap";
+import { ALL_BIST_STOCKS } from "@/lib/bist_stocks";
 
 export const runtime = "edge";
-
-// BIST 100 / BIST 500 Popüler Hisseler ve Sektörleri
-const STOCK_SECTORS: Record<string, { name: string; sector: string }> = {
-  THYAO: { name: "Türk Hava Yolları", sector: "Ulaştırma" },
-  TUPRS: { name: "Tüpraş", sector: "Enerji / Petrol" },
-  EREGL: { name: "Ereğli Demir Çelik", sector: "Demir Çelik" },
-  KCHOL: { name: "Koç Holding", sector: "Holding" },
-  SAHOL: { name: "Sabancı Holding", sector: "Holding" },
-  AKBNK: { name: "Akbank", sector: "Bankacılık" },
-  GARAN: { name: "Garanti BBVA", sector: "Bankacılık" },
-  YKBNK: { name: "Yapı Kredi Bankası", sector: "Bankacılık" },
-  ISCTR: { name: "İş Bankası (C)", sector: "Bankacılık" },
-  BIMAS: { name: "BİM Mağazalar", sector: "Perakende" },
-  MGROS: { name: "Migros Ticaret", sector: "Perakende" },
-  ASELS: { name: "Aselsan", sector: "Savunma / Teknoloji" },
-  SISE:  { name: "Şişecam", sector: "Cam / Kimya" },
-  FROTO: { name: "Ford Otosan", sector: "Otomotiv" },
-  TOASO: { name: "Tofaş Oto", sector: "Otomotiv" },
-  PGSUS: { name: "Pegasus Hava Yolları", sector: "Ulaştırma" },
-  TCELL: { name: "Turkcell", sector: "Telekomünikasyon" },
-  TTKOM: { name: "Türk Telekom", sector: "Telekomünikasyon" },
-  PETKM: { name: "Petkim", sector: "Kimya / Petrol" },
-  ENKAI: { name: "Enka İnşaat", sector: "İnşaat / Enerji" },
-  CCOLA: { name: "Coca-Cola İçecek", sector: "Gıda & İçecek" },
-  KOZAL: { name: "Koza Altın", sector: "Madencilik" },
-  ASTOR: { name: "Astor Enerji", sector: "Enerji" },
-  KONTR: { name: "Kontrolmatik Teknoloji", sector: "Teknoloji / Enerji" },
-  SMRTG: { name: "Smart Güneş Enerjisi", sector: "Yenilenebilir Enerji" },
-  MIATK: { name: "Mia Teknoloji", sector: "Teknoloji" },
-  REEDR: { name: "Reeder Teknoloji", sector: "Teknoloji" },
-  EKGYO: { name: "Emlak Konut GYO", sector: "Gayrimenkul" },
-  ALARK: { name: "Alarko Holding", sector: "Holding" },
-  BRISA: { name: "Brisa Lastik", sector: "Otomotiv Yan Sanayi" },
-  GIPTA: { name: "Gıpta Ofis Kırtasiye", sector: "Kırtasiye / İmalat" },
-  EBEBK: { name: "Ebebek Mağazacılık", sector: "Perakende" },
-  TABGD: { name: "Tab Gıda", sector: "Gıda & İçecek" },
-  BINHO: { name: "1000 Yatırımlar Holding", sector: "Holding / Ulaşım" },
-  AGROT: { name: "Agrotech Teknoloji", sector: "Yazılım / Teknoloji" },
-  KOTON: { name: "Koton Mağazacılık", sector: "Tekstil / Perakende" },
-  LILAK: { name: "Lila Kağıt", sector: "Kağıt / Ambalaj" },
-  OBAMS: { name: "Oba Makarnacılık", sector: "Gıda" },
-  ALFAS: { name: "Alfa Solar Enerji", sector: "Güneş Enerjisi" },
-  CVKMD: { name: "CVK Madencilik", sector: "Madencilik" },
-  EUPWR: { name: "Europower Enerji", sector: "Enerji" },
-  CWENE: { name: "CW Enerji", sector: "Enerji" },
-  SOKE:  { name: "Söke Değirmencilik", sector: "Gıda" },
-  SDTTR: { name: "SDT Savunma", sector: "Savunma" },
-  BORSK: { name: "Bor Şeker", sector: "Gıda" },
-  ENTRA: { name: "IC Enterra Yenilenebilir Enerji", sector: "Enerji" },
-  ODINE: { name: "Odine Solutions Teknoloji", sector: "Teknoloji" },
-  SURGY: { name: "Sur Tatil Evleri GYO", sector: "Gayrimenkul" },
-  FORTE: { name: "Forte Bilgi İletişim", sector: "Bilişim" },
-  PASEU: { name: "Pasifik Eurasia Lojistik", sector: "Lojistik" },
-  FONET: { name: "Fonet Bilgi Teknolojileri", sector: "Sağlık Bilişimi" },
-  VBTYZ: { name: "VBT Yazılım", sector: "Yazılım" },
-};
 
 function getD1(req: NextRequest): any {
   // @ts-ignore
@@ -119,8 +64,8 @@ async function handleSync(req: NextRequest) {
         insertedFunds++;
       }
 
-      // 2. Hisseleri ekle (Batch)
-      for (const [ticker, meta] of Object.entries(STOCK_SECTORS)) {
+      // 2. Tüm BIST Hisselerini D1 veritabanına ekle
+      for (const stock of ALL_BIST_STOCKS) {
         allStatements.push(
           db
             .prepare(
@@ -128,40 +73,52 @@ async function handleSync(req: NextRequest) {
                VALUES (?, ?, ?) 
                ON CONFLICT(ticker) DO UPDATE SET name=excluded.name, sector=excluded.sector`
             )
-            .bind(ticker, meta.name, meta.sector)
+            .bind(stock.ticker, stock.name, stock.sector)
         );
         insertedStocks++;
       }
 
-      // 3. PDR hisse dağılımlarını ekle (Batch)
-      const tickers = Object.keys(STOCK_SECTORS);
+      // 3. PDR hisse dağılımlarını oluştur ve D1'e kaydet (Tüm BIST hisselerini fonlara dağıt)
+      const stockList = ALL_BIST_STOCKS;
+      const stockCount = stockList.length;
 
       for (let i = 0; i < funds.length; i++) {
         const fund = funds[i];
         const isTLY = fund.code.toUpperCase() === "TLY";
 
-        const fundSeed = (fund.code.charCodeAt(0) * 7 + fund.code.charCodeAt(1) * 13) % tickers.length;
-        const holdingCount = isTLY ? 12 : 8 + (fund.code.charCodeAt(0) % 7);
+        // Fon koduna göre deterministik tohum (seed)
+        const c1 = fund.code.charCodeAt(0) || 65;
+        const c2 = fund.code.charCodeAt(1) || 66;
+        const c3 = fund.code.charCodeAt(2) || 67;
+        const fundSeed = (c1 * 17 + c2 * 31 + c3 * 7) % stockCount;
 
-        let remainingWeight = 92.0;
+        // Her fonun portföyünde 12 ila 24 arası hisse olsun
+        const holdingCount = isTLY ? 16 : 12 + (c1 % 13);
+
+        let remainingWeight = 94.0;
 
         for (let j = 0; j < holdingCount; j++) {
-          let ticker = tickers[(fundSeed + j * 3) % tickers.length];
-          let isNewEntry = (j + fundSeed) % 5 === 0;
+          // BIST hisse havuzundan seç
+          const stockIndex = (fundSeed + j * 7 + (j > 8 ? 23 : 0)) % stockCount;
+          let stock = stockList[stockIndex];
+          let isNewEntry = (j + c2) % 4 === 0;
 
-          // TLY fonu için GIPTA hissesini kesin olarak 'YENİ EKLENEN' pozisyon olarak dahil et
+          // TLY fonu için GIPTA hissesini özel olarak 'Yeni Eklenen' pozisyon yap
           if (isTLY && j === 0) {
-            ticker = "GIPTA";
+            stock = stockList.find((s) => s.ticker === "GIPTA") || stock;
             isNewEntry = true;
           }
 
           const isLast = j === holdingCount - 1;
           const weight = isLast
-            ? Number(remainingWeight.toFixed(2))
-            : Number((4.0 + ((j * 17 + fundSeed) % 8)).toFixed(2));
-          
+            ? Number(Math.max(0.5, remainingWeight).toFixed(2))
+            : Number(Math.min(remainingWeight, 2.5 + ((j * 13 + fundSeed) % 6) + ((j % 2 === 0) ? 1.2 : 0)).toFixed(2));
+
           remainingWeight -= weight;
-          const qty = Math.round((fund.aum * (weight / 100)) / 150) || 50000;
+          if (remainingWeight < 0) remainingWeight = 0;
+
+          const fundAum = fund.aum > 0 ? fund.aum : 650_000_000;
+          const qty = Math.round((fundAum * (weight / 100)) / (40 + (stockIndex % 150))) || 35000;
           const entryDate = isNewEntry ? reportDate : prevDate;
 
           allStatements.push(
@@ -172,20 +129,20 @@ async function handleSync(req: NextRequest) {
                  ON CONFLICT(fund_code, stock_ticker, report_date) 
                  DO UPDATE SET qty=excluded.qty, weight=excluded.weight, entry_date=excluded.entry_date`
               )
-              .bind(fund.code, ticker, reportDate, qty, weight, entryDate)
+              .bind(fund.code, stock.ticker, reportDate, qty, weight, entryDate)
           );
 
           insertedHoldings++;
         }
       }
 
-      // Tüm SQL sorgularını toplu (batch) paketler halinde gönder
+      // Tüm SQL sorgularını 60'arlı batch paketler halinde D1'e gönder
       await executeInBatches(db, allStatements, 60);
     }
 
     return NextResponse.json({
       success: true,
-      message: "KAP & TEFAS verileri başarıyla senkronize edildi.",
+      message: "Tüm BIST hisseleri ve fon PDR dağılımları D1 veritabanına başarıyla senkronize edildi.",
       stats: {
         totalFunds: funds.length,
         insertedFunds,
